@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Carga Bait - Clientes Nuevos M4Pro</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Gothic+A1:wght@400;500;600;700;800;900&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Gothic A1', 'Gotham', Arial, sans-serif;
+            background: linear-gradient(135deg, #1c89d8 0%, #285C8C 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(45deg, #000000, #1c89d8);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 900;
+            letter-spacing: -1px;
+        }
+        
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+            font-weight: 400;
+        }
+        
+        .content {
+            padding: 40px;
+        }
+        
+        .instructions {
+            background: #ffffff;
+            border: 2px solid #ffd100;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .instructions h3 {
+            color: #000000;
+            font-weight: 700;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .instructions ol {
+            margin-left: 20px;
+            color: #333;
+        }
+        
+        .instructions li {
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+        
+        .upload-zone {
+            border: 3px dashed #1c89d8;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            margin-bottom: 30px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        
+        .upload-zone:hover {
+            border-color: #285C8C;
+            background-color: #f8f9fa;
+        }
+        
+        .upload-zone.dragover {
+            border-color: #ffd100;
+            background-color: #fffacd;
+        }
+        
+        .upload-icon {
+            font-size: 3em;
+            color: #1c89d8;
+            margin-bottom: 20px;
+        }
+        
+        .file-input {
+            display: none;
+        }
+        
+        .btn {
+            background: linear-gradient(45deg, #1c89d8, #285C8C);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1.1em;
+            font-weight: 600;
+            margin: 10px;
+            transition: all 0.3s ease;
+            font-family: 'Gothic A1', 'Gotham', Arial, sans-serif;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(28, 137, 216, 0.3);
+        }
+        
+        .btn:disabled {
+            background: #dcdcdc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .progress-container {
+            display: none;
+            margin: 20px 0;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #ecf0f1;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(45deg, #ffd100, #ffed4e);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        
+        .log-container {
+            background: #000000;
+            color: #ffffff;
+            padding: 20px;
+            border-radius: 10px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: 'Gothic A1', monospace;
+            font-size: 0.9em;
+            display: none;
+        }
+        
+        .log-entry {
+            margin-bottom: 5px;
+            padding: 2px 0;
+        }
+        
+        .log-success {
+            color: #ffd100;
+        }
+        
+        .log-error {
+            color: #ff6b6b;
+        }
+        
+        .log-info {
+            color: #1c89d8;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+            display: none;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .stat-number {
+            font-size: 2em;
+            font-weight: 800;
+            color: #1c89d8;
+        }
+        
+        .stat-label {
+            color: #dcdcdc;
+            margin-top: 5px;
+            font-weight: 500;
+        }
+        
+        .airtable-link {
+            background: #ffffff;
+            border: 2px solid #1c89d8;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        .airtable-link a {
+            color: #1c89d8;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 1.1em;
+        }
+        
+        .airtable-link a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📱 Sistema de Carga Bait M4Pro</h1>
+            <p>Clientes Nuevos • Gestión ICC M4Pro</p>
+        </div>
+        
+        <div class="content">
+            <!-- Sección de plantillas mejorada -->
+            <div class="template-section">
+                <h3>📋 Plantillas y Formato</h3>
+                <p style="margin-bottom: 15px;">Descarga la plantilla para asegurar el formato correcto de tus datos:</p>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-bottom: 20px;">
+                    <button class="btn btn-success" onclick="downloadExcelTemplate()">
+                        📥 Descargar Plantilla Excel
+                    </button>
+                    <button class="btn btn-success" onclick="downloadCSVTemplate()">
+                        📥 Descargar Plantilla CSV
+                    </button>
+                    <button class="btn btn-success" onclick="openGoogleSheetTemplate()">
+                        📊 Abrir Google Sheet Plantilla
+                    </button>
+                </div>
+                
+                <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; border-left: 4px solid #1c89d8;">
+                    <h4 style="margin-bottom: 10px; color: #000;">📝 Formato requerido:</h4>
+                    <div style="font-family: monospace; background: white; padding: 10px; border-radius: 4px; margin-bottom: 10px; overflow-x: auto;">
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <tr style="background: #e9ecef;">
+                                <th style="padding: 8px; border: 1px solid #ddd; text-align: left;">icc_number</th>
+                                <th style="padding: 8px; border: 1px solid #ddd; text-align: left;">mobile_number</th>
+                                <th style="padding: 8px; border: 1px solid #ddd; text-align: left;">activation_date</th>
+                            </tr>
+                            <tr>
+                                <td style="padding: 8px; border: 1px solid #ddd;">8952140063253528071F</td>
+                                <td style="padding: 8px; border: 1px solid #ddd;">5551234567</td>
+                                <td style="padding: 8px; border: 1px solid #ddd;">15/6/2025</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 8px; border: 1px solid #ddd;">8952140063253528072F</td>
+                                <td style="padding: 8px; border: 1px solid #ddd;">5559876543</td>
+                                <td style="padding: 8px; border: 1px solid #ddd;">16/6/2025</td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div style="font-size: 0.9em; color: #666;">
+                        <strong>⚠️ Importante:</strong>
+                        <ul style="margin: 5px 0 0 20px;">
+                            <li><strong>ICC:</strong> Exactamente 19 dígitos + letra F</li>
+                            <li><strong>Teléfono:</strong> 10 dígitos (sin espacios ni guiones)</li>
+                            <li><strong>Fecha:</strong> Formato DD/MM/YYYY o DD/M/YYYY</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Zona de carga -->
+            <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
+                <div class="upload-icon">📄</div>
+                <h3>Arrastra y suelta tu CSV de Google Sheets aquí</h3>
+                <p>o haz clic para seleccionar</p>
+                <p style="margin-top: 10px; color: #7f8c8d;">Solo archivos CSV exportados desde Google Sheets</p>
+                <input type="file" id="fileInput" class="file-input" accept=".csv" onchange="handleFile(this.files[0])">
+            </div>
+            
+            <!-- Botón de procesamiento -->
+            <div style="text-align: center; margin: 20px 0;">
+                <button class="btn" id="processBtn" onclick="processData()" disabled>
+                    🔄 Procesar datos a Supabase M4Pro
+                </button>
+            </div>
+            
+            <!-- Progreso -->
+            <div class="progress-container" id="progressContainer">
+                <h4>Procesando registros...</h4>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div id="progressText">0%</div>
+            </div>
+            
+            <!-- Estadísticas -->
+            <div class="stats" id="statsContainer">
+                <div class="stat-card">
+                    <div class="stat-number" id="totalRecords">0</div>
+                    <div class="stat-label">Total Registros</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="newRecords">0</div>
+                    <div class="stat-label">Nuevos</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="updatedRecords">0</div>
+                    <div class="stat-label">Actualizados</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="errorRecords">0</div>
+                    <div class="stat-label">Errores</div>
+                </div>
+            </div>
+            
+            <!-- Log -->
+            <div class="log-container" id="logContainer">
+                <div id="logContent"></div>
+            </div>
+            
+            <div style="text-align: center; margin-top: 30px;">
+                <button class="btn" onclick="clearLog()">🗑️ Limpiar Log</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuración de Supabase REST API
+        const supabaseUrl = 'https://devsupabase.m4metadryve.mx';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.ewogICJyb2xlIjogImFub24iLAogICJpc3MiOiAic3VwYWJhc2UiLAogICJpYXQiOiAxNzE1MDUwODAwLAogICJleHAiOiAxODcyODE3MjAwCn0.PgdtfQRzmrAz1n7OHpgJPEHFIrQHP_Y0G1L8xllmd1M';
+        const apiUrl = `${supabaseUrl}/rest/v1`;
+        
+        const headers = {
+            'apikey': supabaseKey,
+            'Authorization': `Bearer ${supabaseKey}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'return=representation'
+        };
+        
+        let parsedData = [];
+        let stats = {
+            total: 0,
+            new: 0,
+            updated: 0,
+            errors: 0
+        };
+
+        // Configuración drag & drop
+        const uploadZone = document.getElementById('uploadZone');
+        
+        uploadZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadZone.classList.add('dragover');
+        });
+        
+        uploadZone.addEventListener('dragleave', () => {
+            uploadZone.classList.remove('dragover');
+        });
+        
+        uploadZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadZone.classList.remove('dragover');
+            const file = e.dataTransfer.files[0];
+            if (file) handleFile(file);
+        });
+
+        function log(message, type = 'info') {
+            const logContainer = document.getElementById('logContainer');
+            const logContent = document.getElementById('logContent');
+            
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry log-${type}`;
+            logEntry.textContent = `[${timestamp}] ${message}`;
+            
+            logContent.appendChild(logEntry);
+            logContainer.style.display = 'block';
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+
+        function updateProgress(percent) {
+            document.getElementById('progressFill').style.width = percent + '%';
+            document.getElementById('progressText').textContent = percent + '%';
+        }
+
+        function showProgress() {
+            document.getElementById('progressContainer').style.display = 'block';
+        }
+
+        function hideProgress() {
+            document.getElementById('progressContainer').style.display = 'none';
+        }
+
+        function updateStats() {
+            document.getElementById('totalRecords').textContent = stats.total;
+            document.getElementById('newRecords').textContent = stats.new;
+            document.getElementById('updatedRecords').textContent = stats.updated;
+            document.getElementById('errorRecords').textContent = stats.errors;
+            document.getElementById('statsContainer').style.display = 'grid';
+        }
+
+        function resetStats() {
+            stats = { total: 0, new: 0, updated: 0, errors: 0 };
+            updateStats();
+        }
+
+        function handleFile(file) {
+            if (!file) return;
+            
+            if (!file.name.endsWith('.csv')) {
+                log('Error: Solo se aceptan archivos CSV', 'error');
+                return;
+            }
+            
+            log(`Leyendo archivo: ${file.name}`, 'info');
+            
+            Papa.parse(file, {
+                header: true,
+                skipEmptyLines: true,
+                complete: function(results) {
+                    if (results.errors.length > 0) {
+                        log('Error parseando CSV: ' + results.errors[0].message, 'error');
+                        return;
+                    }
+                    
+                    parsedData = results.data;
+                    log(`Archivo parseado: ${parsedData.length} registros encontrados`, 'success');
+                    
+                    // Validar columnas esperadas (flexible con mayúsculas/minúsculas)
+                    if (parsedData.length > 0) {
+                        const firstRow = parsedData[0];
+                        const headers = Object.keys(firstRow);
+                        
+                        // Normalizar headers a lowercase para comparación
+                        const normalizedHeaders = headers.map(h => h.toLowerCase());
+                        const requiredFields = ['icc_number', 'mobile_number', 'activation_date'];
+                        const missingFields = requiredFields.filter(field => !normalizedHeaders.includes(field));
+                        
+                        if (missingFields.length > 0) {
+                            log(`Error: Faltan columnas: ${missingFields.join(', ')}`, 'error');
+                            log(`Columnas encontradas: ${headers.join(', ')}`, 'info');
+                            log('Asegúrate de exportar desde Google Sheets con las columnas correctas', 'error');
+                            return;
+                        }
+                        
+                        log(`Columnas detectadas: ${headers.join(', ')}`, 'info');
+                    }
+                    
+                    document.getElementById('processBtn').disabled = false;
+                    log('Archivo listo para procesar. Haz clic en "Procesar datos"', 'info');
+                },
+                error: function(error) {
+                    log('Error leyendo archivo: ' + error.message, 'error');
+                }
+            });
+        }
+
+        async function checkIfICCExists(iccNumber) {
+            try {
+                const response = await fetch(`${apiUrl}/bait_portability_eligible_icc_m4pro?icc_number=eq.${iccNumber}&select=id`, {
+                    method: 'GET',
+                    headers: headers
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Error HTTP: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                return data.length > 0 ? data[0] : null;
+            } catch (error) {
+                throw new Error(`Error verificando ICC: ${error.message}`);
+            }
+        }
+        
+        async function insertNewRecord(recordData) {
+            try {
+                const response = await fetch(`${apiUrl}/bait_portability_eligible_icc_m4pro`, {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify(recordData)
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.text();
+                    throw new Error(`Error HTTP ${response.status}: ${errorData}`);
+                }
+                
+                return await response.json();
+            } catch (error) {
+                throw new Error(`Error creando registro: ${error.message}`);
+            }
+        }
+        
+        async function updateExistingRecord(id, recordData) {
+            try {
+                const response = await fetch(`${apiUrl}/bait_portability_eligible_icc_m4pro?id=eq.${id}`, {
+                    method: 'PATCH',
+                    headers: headers,
+                    body: JSON.stringify(recordData)
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.text();
+                    throw new Error(`Error HTTP ${response.status}: ${errorData}`);
+                }
+                
+                return await response.json();
+            } catch (error) {
+                throw new Error(`Error actualizando registro: ${error.message}`);
+            }
+        }
+
+        function validateRecord(record) {
+            const errors = [];
+            
+            // Buscar campos con nombres flexibles (mayúsculas/minúsculas)
+            const iccField = Object.keys(record).find(key => key.toLowerCase() === 'icc_number');
+            const mobileField = Object.keys(record).find(key => key.toLowerCase() === 'mobile_number');
+            const dateField = Object.keys(record).find(key => key.toLowerCase() === 'activation_date');
+            
+            // Validación estricta del ICC: exactamente 19 dígitos + F
+            if (!iccField || !record[iccField]) {
+                errors.push('ICC_NUMBER faltante');
+            } else {
+                const iccValue = record[iccField].toString().trim();
+                // Debe ser exactamente 19 dígitos seguidos de F
+                const iccPattern = /^\d{19}F$/;
+                if (!iccPattern.test(iccValue)) {
+                    errors.push(`ICC inválido: "${iccValue}" (debe ser exactamente 19 dígitos + F)`);
+                }
+            }
+            
+            // Validación del número móvil
+            if (!mobileField || !record[mobileField]) {
+                errors.push('MOBILE_NUMBER faltante');
+            } else {
+                const cleanMobile = record[mobileField].toString().replace(/[^\d]/g, '');
+                if (cleanMobile.length !== 10) {
+                    errors.push(`Teléfono inválido: "${record[mobileField]}" (debe tener exactamente 10 dígitos)`);
+                }
+            }
+            
+            // Validación de fecha
+            if (!dateField || !record[dateField]) {
+                errors.push('ACTIVATION_DATE faltante');
+            }
+            
+            return errors;
+        }
+
+        async function processRecord(record, index, total) {
+            try {
+                const validationErrors = validateRecord(record);
+                if (validationErrors.length > 0) {
+                    log(`Registro ${index + 1}: ${validationErrors.join(', ')}`, 'error');
+                    stats.errors++;
+                    return;
+                }
+
+                // Buscar campos con nombres flexibles
+                const iccField = Object.keys(record).find(key => key.toLowerCase() === 'icc_number');
+                const mobileField = Object.keys(record).find(key => key.toLowerCase() === 'mobile_number');
+                const dateField = Object.keys(record).find(key => key.toLowerCase() === 'activation_date');
+                const statusField = Object.keys(record).find(key => key.toLowerCase() === 'status');
+
+                // Limpiar número de teléfono
+                const cleanMobileNumber = record[mobileField].toString().replace(/[^\d]/g, '');
+
+                // Convertir fecha al formato correcto (YYYY-MM-DD)
+                let formattedDate = record[dateField];
+                if (formattedDate.includes('/')) {
+                    // Convertir de DD/MM/YYYY o DD/M/YYYY a YYYY-MM-DD
+                    const dateParts = formattedDate.split('/');
+                    if (dateParts.length === 3) {
+                        const day = dateParts[0].padStart(2, '0');
+                        const month = dateParts[1].padStart(2, '0');
+                        const year = dateParts[2];
+                        formattedDate = `${year}-${month}-${day}`;
+                    }
+                }
+
+                // Calcular expiration_date (15 días después de activation_date)
+                const activationDate = new Date(formattedDate);
+                const expirationDate = new Date(activationDate);
+                expirationDate.setDate(activationDate.getDate() + 15);
+                const formattedExpirationDate = expirationDate.toISOString().split('T')[0];
+
+                // Verificar si el ICC ya existe
+                const existing = await checkIfICCExists(record[iccField]);
+
+                const recordData = {
+                    icc_number: record[iccField],
+                    mobile_number: cleanMobileNumber,
+                    activation_date: formattedDate,
+                    expiration_date: formattedExpirationDate,
+                    status: record[statusField] || 'available',
+                    whatsapp_validated: true,
+                    upload_batch: `SHEETS_M4PRO_${new Date().toISOString().split('T')[0]}`,
+                    created_at: new Date().toISOString()
+                };
+
+                if (existing) {
+                    await updateExistingRecord(existing.id, recordData);
+                    stats.updated++;
+                    log(`Registro ${index + 1}: ICC ${record[iccField]} actualizado`, 'success');
+                } else {
+                    await insertNewRecord(recordData);
+                    stats.new++;
+                    log(`Registro ${index + 1}: ICC ${record[iccField]} creado`, 'success');
+                }
+
+                const progress = Math.round(((index + 1) / total) * 100);
+                updateProgress(progress);
+
+            } catch (error) {
+                stats.errors++;
+                log(`Registro ${index + 1}: Error - ${error.message}`, 'error');
+            }
+        }
+
+        async function processData() {
+            if (!parsedData || parsedData.length === 0) {
+                log('No hay datos para procesar', 'error');
+                return;
+            }
+
+            document.getElementById('processBtn').disabled = true;
+            resetStats();
+            showProgress();
+            
+            log('Iniciando procesamiento de datos M4Pro...', 'info');
+            stats.total = parsedData.length;
+            updateStats();
+
+            try {
+                for (let i = 0; i < parsedData.length; i++) {
+                    await processRecord(parsedData[i], i, parsedData.length);
+                    
+                    // Pausa pequeña para evitar sobrecargar la API
+                    if (i % 3 === 0 && i > 0) {
+                        await new Promise(resolve => setTimeout(resolve, 200));
+                    }
+                }
+
+                hideProgress();
+                updateStats();
+                log(`✅ Procesamiento M4Pro completado: ${stats.new} nuevos, ${stats.updated} actualizados, ${stats.errors} errores`, 'success');
+                
+            } catch (error) {
+                hideProgress();
+                log(`Error en procesamiento M4Pro: ${error.message}`, 'error');
+            } finally {
+                document.getElementById('processBtn').disabled = false;
+            }
+        }
+
+        function clearLog() {
+            document.getElementById('logContent').innerHTML = '';
+            document.getElementById('logContainer').style.display = 'none';
+            document.getElementById('statsContainer').style.display = 'none';
+        }
+
+        // Test de conexión al cargar
+        window.addEventListener('load', async function() {
+            log('Iniciando Sistema de Carga Bait M4Pro...', 'info');
+            
+            try {
+                const response = await fetch(`${apiUrl}/bait_portability_eligible_icc_m4pro?select=count`, {
+                    method: 'GET',
+                    headers: headers
+                });
+                
+                if (response.ok) {
+                    log('✅ Sistema de Carga Bait M4Pro iniciado correctamente', 'success');
+                    log('✅ Conexión con Supabase establecida', 'success');
+                    log('📋 Listo para procesar archivos CSV desde Google Sheets', 'info');
+                } else {
+                    log('❌ Error conectando con Supabase M4Pro', 'error');
+                }
+            } catch (error) {
+                log('❌ Error de conexión: ' + error.message, 'error');
+            }
+        });
+    </script>
+</body>
+</html>
