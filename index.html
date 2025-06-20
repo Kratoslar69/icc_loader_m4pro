@@ -138,6 +138,47 @@
             box-shadow: none;
         }
         
+        .btn-success {
+            background: linear-gradient(45deg, #27ae60, #2ecc71);
+        }
+        
+        .btn-success:hover {
+            box-shadow: 0 5px 15px rgba(39, 174, 96, 0.3);
+        }
+        
+        /* Nuevos estilos para botones de control */
+        .btn-warning {
+            background: linear-gradient(45deg, #f39c12, #e67e22);
+        }
+        
+        .btn-warning:hover {
+            box-shadow: 0 5px 15px rgba(243, 156, 18, 0.3);
+        }
+        
+        .btn-danger {
+            background: linear-gradient(45deg, #e74c3c, #c0392b);
+        }
+        
+        .btn-danger:hover {
+            box-shadow: 0 5px 15px rgba(231, 76, 60, 0.3);
+        }
+        
+        .process-controls {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        
+        .control-buttons {
+            display: none;
+            justify-content: center;
+            gap: 10px;
+            margin: 10px 0;
+            flex-wrap: wrap;
+        }
+        
         .progress-container {
             display: none;
             margin: 20px 0;
@@ -187,6 +228,10 @@
             color: #1c89d8;
         }
         
+        .log-warning {
+            color: #f39c12;
+        }
+        
         .stats {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -233,6 +278,26 @@
         
         .airtable-link a:hover {
             text-decoration: underline;
+        }
+        
+        /* Indicador de estado de procesamiento */
+        .processing-status {
+            background: #f8f9fa;
+            border-left: 4px solid #1c89d8;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 0 8px 8px 0;
+            display: none;
+        }
+        
+        .processing-status.paused {
+            border-left-color: #f39c12;
+            background: #fef9e7;
+        }
+        
+        .processing-status.stopped {
+            border-left-color: #e74c3c;
+            background: #fdf2f2;
         }
     </style>
 </head>
@@ -302,11 +367,27 @@
                 <input type="file" id="fileInput" class="file-input" accept=".csv" onchange="handleFile(this.files[0])">
             </div>
             
-            <!-- Botón de procesamiento -->
-            <div style="text-align: center; margin: 20px 0;">
+            <!-- Botones de procesamiento -->
+            <div class="process-controls">
                 <button class="btn" id="processBtn" onclick="processData()" disabled>
                     🔄 Procesar datos a Supabase M4Pro
                 </button>
+            </div>
+            
+            <!-- Botones de control durante procesamiento -->
+            <div class="control-buttons" id="controlButtons">
+                <button class="btn btn-warning" id="pauseBtn" onclick="togglePause()">
+                    ⏸️ Pausar
+                </button>
+                <button class="btn btn-danger" id="stopBtn" onclick="stopProcessing()">
+                    ⏹️ Detener
+                </button>
+            </div>
+            
+            <!-- Estado de procesamiento -->
+            <div class="processing-status" id="processingStatus">
+                <strong id="statusText">Procesando...</strong>
+                <span id="statusDetails"></span>
             </div>
             
             <!-- Progreso -->
@@ -370,6 +451,12 @@
             errors: 0
         };
 
+        // Variables de control de procesamiento
+        let isProcessing = false;
+        let isPaused = false;
+        let shouldStop = false;
+        let currentIndex = 0;
+
         // Configuración drag & drop
         const uploadZone = document.getElementById('uploadZone');
         
@@ -427,6 +514,131 @@
         function resetStats() {
             stats = { total: 0, new: 0, updated: 0, errors: 0 };
             updateStats();
+        }
+
+        // Nuevas funciones de control
+        function showControlButtons() {
+            document.getElementById('controlButtons').style.display = 'flex';
+        }
+
+        function hideControlButtons() {
+            document.getElementById('controlButtons').style.display = 'none';
+        }
+
+        function updateProcessingStatus(status, details = '') {
+            const statusElement = document.getElementById('processingStatus');
+            const statusText = document.getElementById('statusText');
+            const statusDetails = document.getElementById('statusDetails');
+            
+            statusElement.className = 'processing-status';
+            
+            switch(status) {
+                case 'processing':
+                    statusElement.classList.add('processing');
+                    statusText.textContent = 'Procesando M4Pro...';
+                    statusElement.style.display = 'block';
+                    break;
+                case 'paused':
+                    statusElement.classList.add('paused');
+                    statusText.textContent = '⏸️ Procesamiento M4Pro pausado';
+                    statusElement.style.display = 'block';
+                    break;
+                case 'stopped':
+                    statusElement.classList.add('stopped');
+                    statusText.textContent = '⏹️ Procesamiento M4Pro detenido';
+                    statusElement.style.display = 'block';
+                    break;
+                case 'completed':
+                    statusElement.style.display = 'none';
+                    break;
+            }
+            
+            statusDetails.textContent = details;
+        }
+
+        function togglePause() {
+            const pauseBtn = document.getElementById('pauseBtn');
+            
+            if (isPaused) {
+                isPaused = false;
+                pauseBtn.innerHTML = '⏸️ Pausar';
+                pauseBtn.className = 'btn btn-warning';
+                updateProcessingStatus('processing', `Continuando desde registro ${currentIndex + 1}...`);
+                log('🔄 Procesamiento M4Pro reanudado', 'info');
+                
+                // Continuar procesamiento
+                continueProcessing();
+            } else {
+                isPaused = true;
+                pauseBtn.innerHTML = '▶️ Continuar';
+                pauseBtn.className = 'btn btn-success';
+                updateProcessingStatus('paused', `Pausado en registro ${currentIndex + 1} de ${parsedData.length}`);
+                log('⏸️ Procesamiento M4Pro pausado', 'warning');
+            }
+        }
+
+        function stopProcessing() {
+            shouldStop = true;
+            isPaused = false;
+            isProcessing = false;
+            
+            updateProcessingStatus('stopped', `Detenido en registro ${currentIndex + 1} de ${parsedData.length}`);
+            hideControlButtons();
+            hideProgress();
+            
+            document.getElementById('processBtn').disabled = false;
+            
+            log('⏹️ Procesamiento M4Pro detenido por el usuario', 'warning');
+            log(`📊 Registros M4Pro procesados hasta el momento: ${stats.new + stats.updated} exitosos, ${stats.errors} errores`, 'info');
+        }
+
+        async function continueProcessing() {
+            if (shouldStop || !isProcessing) return;
+            
+            try {
+                for (let i = currentIndex; i < parsedData.length; i++) {
+                    if (shouldStop) break;
+                    
+                    // Pausa si se solicita
+                    while (isPaused && !shouldStop) {
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                    }
+                    
+                    if (shouldStop) break;
+                    
+                    currentIndex = i;
+                    await processRecord(parsedData[i], i, parsedData.length);
+                    
+                    // Pausa pequeña para evitar sobrecargar la API
+                    if (i % 3 === 0 && i > 0) {
+                        await new Promise(resolve => setTimeout(resolve, 200));
+                    }
+                }
+
+                // Procesamiento completado
+                if (!shouldStop) {
+                    finishProcessing();
+                }
+                
+            } catch (error) {
+                hideProgress();
+                hideControlButtons();
+                updateProcessingStatus('stopped', 'Error durante el procesamiento M4Pro');
+                log(`Error en procesamiento M4Pro: ${error.message}`, 'error');
+                document.getElementById('processBtn').disabled = false;
+                isProcessing = false;
+            }
+        }
+
+        function finishProcessing() {
+            isProcessing = false;
+            hideProgress();
+            hideControlButtons();
+            updateProcessingStatus('completed');
+            updateStats();
+            
+            log(`✅ Procesamiento M4Pro completado: ${stats.new} nuevos, ${stats.updated} actualizados, ${stats.errors} errores`, 'success');
+            document.getElementById('processBtn').disabled = false;
         }
 
         function handleFile(file) {
@@ -650,40 +862,31 @@
                 return;
             }
 
+            // Resetear variables de control
+            isProcessing = true;
+            isPaused = false;
+            shouldStop = false;
+            currentIndex = 0;
+
             document.getElementById('processBtn').disabled = true;
             resetStats();
             showProgress();
+            showControlButtons();
+            updateProcessingStatus('processing', 'Iniciando procesamiento M4Pro...');
             
             log('Iniciando procesamiento de datos M4Pro...', 'info');
             stats.total = parsedData.length;
             updateStats();
 
-            try {
-                for (let i = 0; i < parsedData.length; i++) {
-                    await processRecord(parsedData[i], i, parsedData.length);
-                    
-                    // Pausa pequeña para evitar sobrecargar la API
-                    if (i % 3 === 0 && i > 0) {
-                        await new Promise(resolve => setTimeout(resolve, 200));
-                    }
-                }
-
-                hideProgress();
-                updateStats();
-                log(`✅ Procesamiento M4Pro completado: ${stats.new} nuevos, ${stats.updated} actualizados, ${stats.errors} errores`, 'success');
-                
-            } catch (error) {
-                hideProgress();
-                log(`Error en procesamiento M4Pro: ${error.message}`, 'error');
-            } finally {
-                document.getElementById('processBtn').disabled = false;
-            }
+            // Iniciar procesamiento
+            continueProcessing();
         }
 
         function clearLog() {
             document.getElementById('logContent').innerHTML = '';
             document.getElementById('logContainer').style.display = 'none';
             document.getElementById('statsContainer').style.display = 'none';
+            document.getElementById('processingStatus').style.display = 'none';
         }
 
         // Funciones para descargar plantillas
